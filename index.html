@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Board Game Companion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        },
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0f172a;
+        }
+
+        /* 3D Dice styling */
+        .dice-3d {
+            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        
+        .dice-rolling {
+            animation: diceRollAnim 0.6s ease-in-out;
+        }
+
+        @keyframes diceRollAnim {
+            0% { transform: rotate(0deg) scale(0.8); }
+            30% { transform: rotate(180deg) scale(1.15); }
+            70% { transform: rotate(300deg) scale(0.9); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        /* Coin flip styling */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+
+        /* Custom Scrollbar for Bracket */
+        .bracket-scroll-container {
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
+            scrollbar-width: thin;
+            scrollbar-color: #6366f1 #1e293b;
+        }
+
+        .bracket-scroll-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        .bracket-scroll-container::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 8px;
+        }
+        .bracket-scroll-container::-webkit-scrollbar-thumb {
+            background: #6366f1;
+            border-radius: 8px;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden select-none">
+
+    <!-- Header App Bar -->
+    <header class="bg-cardbg/90 backdrop-blur-md sticky top-0 z-40 border-b border-slate-800 px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 bg-brand-600/20 border border-brand-500/30 text-brand-500 rounded-xl flex items-center justify-center">
+                <i class="fa-solid fa-dice-d20 text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-sm leading-tight text-white">Board Companion</h1>
+                <p class="text-[10px] text-slate-400">Pendamping Board Game Mobile</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btn-sound-toggle" onclick="toggleSound()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-800 text-slate-300 hover:text-white active:scale-95 transition">
+                <i id="icon-sound" class="fa-solid fa-volume-high text-sm"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-1 p-4 pb-28 max-w-lg mx-auto w-full">
+
+        <!-- ================= TAB 1: DADU (DICE ROLLER) ================= -->
+        <section id="tab-dice" class="tab-content block space-y-4">
+            
+            <!-- Type & Count Selector -->
+            <div class="bg-cardbg rounded-2xl p-4 border border-slate-800 shadow-xl space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Pilih Jumlah Dadu</span>
+                    <span id="dice-summary-badge" class="text-xs bg-brand-600/30 border border-brand-500/40 px-2.5 py-0.5 rounded-full text-brand-400 font-bold">1 x D6</span>
+                </div>
+
+                <!-- Dice Count Quick Buttons -->
+                <div class="grid grid-cols-6 gap-1.5">
+                    <button onclick="setDiceCount(1)" class="dice-cnt-btn active py-2 rounded-xl bg-brand-600 text-white font-bold text-sm transition" data-cnt="1">1</button>
+                    <button onclick="setDiceCount(2)" class="dice-cnt-btn py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-sm transition" data-cnt="2">2</button>
+                    <button onclick="setDiceCount(3)" class="dice-cnt-btn py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-sm transition" data-cnt="3">3</button>
+                    <button onclick="setDiceCount(4)" class="dice-cnt-btn py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-sm transition" data-cnt="4">4</button>
+                    <button onclick="setDiceCount(5)" class="dice-cnt-btn py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-sm transition" data-cnt="5">5</button>
+                    <button onclick="setDiceCount(6)" class="dice-cnt-btn py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-sm transition" data-cnt="6">6</button>
+                </div>
+
+                <!-- Optional RPG Dice Types -->
+                <div class="pt-2 border-t border-slate-800">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Jenis Dadu Khusus (Opsional):</span>
+                    <div class="grid grid-cols-6 gap-1">
+                        <button onclick="setDiceType('D4')" class="dice-type-btn py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-[11px] font-bold text-slate-300 hover:border-brand-500" data-type="D4">D4</button>
+                        <button onclick="setDiceType('D6')" class="dice-type-btn active py-1 rounded-lg bg-brand-600 border border-brand-500 text-[11px] font-bold text-white" data-type="D6">D6</button>
+                        <button onclick="setDiceType('D8')" class="dice-type-btn py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-[11px] font-bold text-slate-300 hover:border-brand-500" data-type="D8">D8</button>
+                        <button onclick="setDiceType('D10')" class="dice-type-btn py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-[11px] font-bold text-slate-300 hover:border-brand-500" data-type="D10">D10</button>
+                        <button onclick="setDiceType('D12')" class="dice-type-btn py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-[11px] font-bold text-slate-300 hover:border-brand-500" data-type="D12">D12</button>
+                        <button onclick="setDiceType('D20')" class="dice-type-btn py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-[11px] font-bold text-slate-300 hover:border-brand-500" data-type="D20">D20</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dice Interactive Board Area -->
+            <div id="dice-touch-area" onclick="rollDice()" class="bg-gradient-to-b from-slate-900 to-cardbg border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-2xl min-h-[220px] p-6 flex flex-col items-center justify-center cursor-pointer active:scale-[0.99] transition shadow-inner group">
+                
+                <!-- Container for Visual Dice Cubes -->
+                <div id="dice-cube-container" class="flex flex-wrap justify-center items-center gap-4 my-2">
+                    <!-- Dynamic Dice Rendered Here -->
+                </div>
+
+                <p class="text-xs text-slate-400 mt-3 group-hover:text-brand-400 transition font-medium">
+                    <i class="fa-solid fa-hand-pointer mr-1"></i> Ketuk area ini untuk melempar dadu
+                </p>
+
+                <!-- Big Result Total Display -->
+                <div id="dice-total-box" class="mt-4 pt-3 border-t border-slate-800/80 w-full text-center">
+                    <span class="text-xs text-slate-400 uppercase font-bold block">Total Nilai</span>
+                    <span id="dice-total-val" class="text-4xl font-black text-brand-400">6</span>
+                </div>
+            </div>
+
+            <button onclick="rollDice()" class="w-full py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-brand-600/30 active:scale-95 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-dice text-lg"></i> Kocok Dadu Sekarang
+            </button>
+        </section>
+
+        <!-- ================= TAB 2: TIM (TEAM GENERATOR) ================= -->
+        <section id="tab-teams" class="tab-content hidden space-y-4">
+            <div class="bg-cardbg rounded-2xl p-4 border border-slate-800 space-y-3 shadow-xl">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Daftar Pemain</h3>
+                <textarea id="teams-player-input" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-brand-500" placeholder="Masukkan nama pemain (pisahkan dengan koma atau baris baru)&#10;Contoh: Andi, Budi, Citra, Dedi, Erik, Fani"></textarea>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Metode Pembagian</label>
+                        <select id="teams-mode" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+                            <option value="count">Berdasarkan Jumlah Tim</option>
+                            <option value="size">Jumlah Orang per Tim</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Target Angka</label>
+                        <input id="teams-target-num" type="number" value="2" min="1" max="10" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white font-bold">
+                    </div>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                    <button onclick="generateTeams()" class="flex-1 py-3 bg-brand-600 hover:bg-brand-500 font-bold text-xs rounded-xl shadow-lg active:scale-95 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-shuffle"></i> Bagikan Tim
+                    </button>
+                    <button onclick="copyTeamsList()" class="px-4 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl active:scale-95 transition" title="Salin Tim">
+                        <i class="fa-solid fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Output Team Cards -->
+            <div id="teams-result-container" class="grid grid-cols-1 gap-3">
+                <p class="text-xs text-slate-500 text-center py-6">Hasil acak tim akan muncul di sini.</p>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: BAGAN VS (TOURNAMENT BRACKET) ================= -->
+        <section id="tab-tournament" class="tab-content hidden space-y-4">
+            <div class="bg-cardbg rounded-2xl p-4 border border-slate-800 space-y-3 shadow-xl">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Pengaturan Bagan Turnamen</h3>
+                
+                <div>
+                    <textarea id="tourney-players-input" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500" placeholder="Masukkan nama peserta/tim (pisahkan dengan koma)&#10;Contoh: Andi, Budi, Citra, Dedi, Erik, Fani, Gilang, Hana"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Format</label>
+                        <select id="tourney-type" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-white">
+                            <option value="single">Single Elimination (Gugur)</option>
+                            <option value="roundrobin">Round Robin (Liga)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="generateTournament()" class="w-full py-2 bg-brand-600 hover:bg-brand-500 font-bold text-xs rounded-xl shadow-lg active:scale-95 transition">
+                            Buat Bagan VS
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bracket Viewer Container -->
+            <div class="bg-cardbg/80 rounded-2xl p-4 border border-slate-800 shadow-xl overflow-hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <div>
+                        <span id="tourney-title" class="text-xs font-bold uppercase text-brand-400 block">Bagan Pertandingan</span>
+                        <span class="text-[10px] text-slate-400">Klik nama peserta untuk memajukan pemenang</span>
+                    </div>
+
+                    <!-- Scroll helper controls -->
+                    <div class="flex items-center gap-1.5 bg-slate-900/80 p-1 rounded-xl border border-slate-800">
+                        <button onclick="scrollBracket(-200)" class="w-8 h-8 bg-slate-800 hover:bg-brand-600 border border-slate-700 rounded-lg text-slate-200 flex items-center justify-center text-xs active:scale-95 transition" title="Geser Kiri">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <button onclick="scrollBracket(200)" class="w-8 h-8 bg-slate-800 hover:bg-brand-600 border border-slate-700 rounded-lg text-slate-200 flex items-center justify-center text-xs active:scale-95 transition" title="Geser Kanan">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scrollable Bracket Area -->
+                <div id="tournament-scroll-wrapper" class="bracket-scroll-container w-full py-3 px-1">
+                    <div id="tournament-display" class="min-h-[220px] flex items-center justify-center">
+                        <p class="text-xs text-slate-500">Isi peserta di atas dan tekan "Buat Bagan VS".</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: TOOLS (RODA & KOIN) ================= -->
+        <section id="tab-tools" class="tab-content hidden space-y-4">
+            
+            <!-- Tool Sub Navigation -->
+            <div class="grid grid-cols-2 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-bold">
+                <button id="btn-tool-wheel" onclick="switchToolSub('wheel')" class="py-2 rounded-lg bg-brand-600 text-white transition">Roda Acak (Custom)</button>
+                <button id="btn-tool-coin" onclick="switchToolSub('coin')" class="py-2 rounded-lg text-slate-400 hover:text-white transition">Lempar Koin 3D</button>
+            </div>
+
+            <!-- SUB-TOOL 1: CUSTOM WHEEL -->
+            <div id="subtool-wheel-container" class="space-y-4">
+                
+                <!-- Wheel Canvas Card -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-slate-800 flex flex-col items-center shadow-xl">
+                    <div class="relative w-60 h-60 my-2">
+                        <!-- Wheel Pointer Indicator -->
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 z-20 text-rose-500 text-2xl filter drop-shadow-md">
+                            <i class="fa-solid fa-caret-down"></i>
+                        </div>
+                        <canvas id="wheel-canvas" width="240" height="240" class="w-full h-full rounded-full border-4 border-slate-700 shadow-2xl transition-transform duration-[4000ms] cubic-bezier(0.15, 0.9, 0.2, 1)"></canvas>
+                    </div>
+
+                    <button onclick="spinWheel()" class="mt-4 px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-brand-600/30 active:scale-95 transition flex items-center gap-2">
+                        <i class="fa-solid fa-dharmachakra"></i> Putar Roda!
+                    </button>
+                    
+                    <p id="wheel-winner" class="mt-3 text-sm font-extrabold text-emerald-400 min-h-[24px] text-center"></p>
+                </div>
+
+                <!-- Custom Options List Editor -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-slate-800 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-bold uppercase text-slate-400">Atur Pilihan Roda</h4>
+                        <span id="wheel-items-count" class="text-[10px] bg-slate-800 text-slate-300 font-bold px-2 py-0.5 rounded-full">4 Item</span>
+                    </div>
+
+                    <!-- Input new option -->
+                    <div class="flex gap-2">
+                        <input id="wheel-new-item-input" type="text" placeholder="Tambah opsi baru..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-500">
+                        <button onclick="addWheelOption()" class="px-4 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl active:scale-95 transition">
+                            + Tambah
+                        </button>
+                    </div>
+
+                    <!-- Options List Container -->
+                    <div id="wheel-options-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1 no-scrollbar pt-1">
+                        <!-- Dynamic Item Rows -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-TOOL 2: COIN FLIP -->
+            <div id="subtool-coin-container" class="hidden bg-cardbg rounded-2xl p-6 border border-slate-800 flex flex-col items-center shadow-xl">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-6">Lempar Koin 3D</h3>
+                
+                <div class="perspective-1000 my-6">
+                    <div id="coin-element" class="w-32 h-32 relative transform-style-3d transition-transform duration-1000">
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 border-4 border-yellow-200 flex flex-col items-center justify-center text-amber-950 font-black shadow-2xl [backface-visibility:hidden]">
+                            <i class="fa-solid fa-crown text-2xl mb-1"></i>
+                            <span class="text-xs tracking-wider">GARUDA</span>
+                        </div>
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-slate-400 to-slate-200 border-4 border-white flex flex-col items-center justify-center text-slate-800 font-black shadow-2xl rotate-y-180 [backface-visibility:hidden]">
+                            <i class="fa-solid fa-hashtag text-2xl mb-1"></i>
+                            <span class="text-xs tracking-wider">ANGKA</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="flipCoin()" class="mt-6 px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs rounded-xl shadow-lg active:scale-95 transition">
+                    Lempar Koin
+                </button>
+                <div id="coin-result" class="mt-4 text-base font-extrabold text-brand-400 min-h-[24px]"></div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar (4 Tab Clean Navigation) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-cardbg/95 backdrop-blur-md border-t border-slate-800 z-50">
+        <div class="max-w-lg mx-auto grid grid-cols-4 py-2 text-center">
+            <button onclick="switchTab('dice')" id="nav-dice" class="nav-btn text-brand-500 flex flex-col items-center gap-1 active:scale-95 transition">
+                <i class="fa-solid fa-dice text-lg"></i>
+                <span class="text-[10px] font-bold">Dadu</span>
+            </button>
+            <button onclick="switchTab('teams')" id="nav-teams" class="nav-btn text-slate-400 hover:text-slate-200 flex flex-col items-center gap-1 active:scale-95 transition">
+                <i class="fa-solid fa-users text-lg"></i>
+                <span class="text-[10px] font-bold">Tim</span>
+            </button>
+            <button onclick="switchTab('tournament')" id="nav-tournament" class="nav-btn text-slate-400 hover:text-slate-200 flex flex-col items-center gap-1 active:scale-95 transition">
+                <i class="fa-solid fa-sitemap text-lg"></i>
+                <span class="text-[10px] font-bold">Bagan VS</span>
+            </button>
+            <button onclick="switchTab('tools')" id="nav-tools" class="nav-btn text-slate-400 hover:text-slate-200 flex flex-col items-center gap-1 active:scale-95 transition">
+                <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+                <span class="text-[10px] font-bold">Tools</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        /* Global App State */
+        let activeTab = 'dice';
+        let soundEnabled = true;
+
+        /* Dice State */
+        let diceCount = 1;
+        let selectedDiceType = 'D6';
+
+        /* Teams State */
+        let generatedTeams = [];
+
+        /* Tournament State */
+        let tournamentData = null;
+
+        /* Wheel Custom Items State */
+        let wheelOptions = ["Pemain 1", "Pemain 2", "Pemain 3", "Pemain 4"];
+        let wheelRotation = 0;
+
+        /* Web Audio API Synthesizer */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'roll') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(160, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.12);
+                } else if (type === 'beep') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(700, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.15);
+                } else if (type === 'win') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.35);
+                }
+            } catch(e) {}
+        }
+
+        function triggerVibration() {
+            if ('vibrate' in navigator) navigator.vibrate(35);
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('icon-sound');
+            icon.className = soundEnabled ? 'fa-solid fa-volume-high text-sm' : 'fa-solid fa-volume-xmark text-sm text-rose-400';
+        }
+
+        /* Navigation Tab Switcher */
+        function switchTab(tabId) {
+            activeTab = tabId;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-brand-500');
+                btn.classList.add('text-slate-400');
+            });
+            document.getElementById(`nav-${tabId}`).classList.remove('text-slate-400');
+            document.getElementById(`nav-${tabId}`).classList.add('text-brand-500');
+
+            if (tabId === 'tools') {
+                renderWheelOptionsList();
+                drawWheel();
+            }
+        }
+
+        /* ================= 🎲 DADU (DICE ROLLER) LOGIC ================= */
+        function setDiceCount(cnt) {
+            diceCount = cnt;
+            document.querySelectorAll('.dice-cnt-btn').forEach(btn => {
+                const isActive = parseInt(btn.dataset.cnt) === cnt;
+                btn.className = isActive ? 
+                    'dice-cnt-btn active py-2 rounded-xl bg-brand-600 text-white font-bold text-sm transition' :
+                    'dice-cnt-btn py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-bold text-sm transition';
+            });
+            updateDiceBadge();
+            renderVisualDice();
+        }
+
+        function setDiceType(type) {
+            selectedDiceType = type;
+            document.querySelectorAll('.dice-type-btn').forEach(btn => {
+                const isActive = btn.dataset.type === type;
+                btn.className = isActive ?
+                    'dice-type-btn active py-1 rounded-lg bg-brand-600 border border-brand-500 text-[11px] font-bold text-white' :
+                    'dice-type-btn py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-[11px] font-bold text-slate-300 hover:border-brand-500';
+            });
+            updateDiceBadge();
+            renderVisualDice();
+        }
+
+        function updateDiceBadge() {
+            document.getElementById('dice-summary-badge').innerText = `${diceCount} x ${selectedDiceType}`;
+        }
+
+        function createD6PipSVG(val) {
+            const pips = {
+                1: [[50, 50]],
+                2: [[25, 25], [75, 75]],
+                3: [[25, 25], [50, 50], [75, 75]],
+                4: [[25, 25], [75, 25], [25, 75], [75, 75]],
+                5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
+                6: [[25, 25], [75, 25], [25, 50], [75, 50], [25, 75], [75, 75]]
+            };
+
+            const circles = (pips[val] || []).map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="9" fill="#1e1b4b" />`).join('');
+            return `<svg viewBox="0 0 100 100" class="w-full h-full p-2">${circles}</svg>`;
+        }
+
+        function renderVisualDice(results = null) {
+            const container = document.getElementById('dice-cube-container');
+            container.innerHTML = '';
+
+            const sides = parseInt(selectedDiceType.replace('D', '')) || 6;
+            let sum = 0;
+
+            for (let i = 0; i < diceCount; i++) {
+                const val = results ? results[i] : Math.floor(Math.random() * sides) + 1;
+                sum += val;
+
+                const dieBox = document.createElement('div');
+                dieBox.className = 'w-20 h-20 bg-gradient-to-br from-indigo-100 via-white to-slate-200 rounded-2xl shadow-xl flex items-center justify-center border-2 border-indigo-200/80 text-3xl font-black text-indigo-950 dice-3d';
+
+                if (selectedDiceType === 'D6') {
+                    dieBox.innerHTML = createD6PipSVG(val);
+                } else {
+                    dieBox.innerText = val;
+                }
+
+                container.appendChild(dieBox);
+            }
+
+            document.getElementById('dice-total-val').innerText = sum;
+        }
+
+        function rollDice() {
+            playSound('roll');
+            triggerVibration();
+
+            const sides = parseInt(selectedDiceType.replace('D', '')) || 6;
+            const results = [];
+            for (let i = 0; i < diceCount; i++) {
+                results.push(Math.floor(Math.random() * sides) + 1);
+            }
+
+            const container = document.getElementById('dice-cube-container');
+            container.querySelectorAll('.dice-3d').forEach(el => el.classList.add('dice-rolling'));
+
+            setTimeout(() => {
+                renderVisualDice(results);
+            }, 300);
+        }
+
+        /* ================= 👥 TIM (TEAM GENERATOR) LOGIC ================= */
+        function generateTeams() {
+            playSound('roll');
+            const inputVal = document.getElementById('teams-player-input').value;
+            let playerList = inputVal.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+
+            if (playerList.length < 2) {
+                playerList = ["Andi", "Budi", "Citra", "Dedi", "Erik", "Fani"];
+            }
+
+            playerList.sort(() => Math.random() - 0.5);
+
+            const mode = document.getElementById('teams-mode').value;
+            const targetNum = parseInt(document.getElementById('teams-target-num').value) || 2;
+            
+            let numTeams = targetNum;
+            if (mode === 'size') {
+                numTeams = Math.ceil(playerList.length / targetNum);
+            }
+            numTeams = Math.max(1, Math.min(numTeams, 10));
+
+            generatedTeams = Array.from({ length: numTeams }, (_, i) => ({
+                name: `Tim ${i + 1}`,
+                members: []
+            }));
+
+            playerList.forEach((p, idx) => {
+                generatedTeams[idx % numTeams].members.push(p);
+            });
+
+            renderTeamsResult();
+        }
+
+        function renderTeamsResult() {
+            const container = document.getElementById('teams-result-container');
+            const colorGradients = [
+                'from-indigo-600 to-purple-600',
+                'from-emerald-600 to-teal-600',
+                'from-rose-600 to-pink-600',
+                'from-amber-600 to-orange-600',
+                'from-cyan-600 to-blue-600'
+            ];
+
+            container.innerHTML = generatedTeams.map((team, idx) => `
+                <div class="bg-cardbg rounded-2xl p-4 border border-slate-800 shadow-md">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-3 h-3 rounded-full bg-gradient-to-r ${colorGradients[idx % colorGradients.length]}"></div>
+                        <h4 class="font-bold text-sm text-white">${team.name}</h4>
+                        <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full ml-auto">${team.members.length} Pemain</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        ${team.members.map(m => `<span class="bg-slate-900 border border-slate-700/80 text-slate-200 text-xs px-2.5 py-1 rounded-lg font-medium">${m}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function copyTeamsList() {
+            if (generatedTeams.length === 0) return;
+            let text = "🏆 HASIL PEMBAGIAN TIM 🏆\n\n";
+            generatedTeams.forEach(t => {
+                text += `${t.name} (${t.members.length}):\n- ${t.members.join('\n- ')}\n\n`;
+            });
+            
+            const dummy = document.createElement('textarea');
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+
+            alert("Daftar Tim berhasil disalin!");
+        }
+
+        /* ================= ⚔️ BAGAN VS (TOURNAMENT BRACKET) LOGIC ================= */
+        function generateTournament() {
+            playSound('roll');
+            const inputVal = document.getElementById('tourney-players-input').value;
+            let pList = inputVal.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+
+            if (pList.length < 2) {
+                pList = ["Andi", "Budi", "Citra", "Dedi", "Erik", "Fani", "Gilang", "Hana"];
+            }
+
+            const type = document.getElementById('tourney-type').value;
+
+            if (type === 'single') {
+                setupSingleElimination(pList);
+            } else {
+                setupRoundRobin(pList);
+            }
+
+            // Scroll wrapper to far-left so round 1 is fully visible
+            setTimeout(() => {
+                const wrapper = document.getElementById('tournament-scroll-wrapper');
+                if (wrapper) wrapper.scrollLeft = 0;
+            }, 50);
+        }
+
+        function setupSingleElimination(playersList) {
+            let bracketSize = 2;
+            while (bracketSize < playersList.length) bracketSize *= 2;
+
+            let seeds = [...playersList];
+            while (seeds.length < bracketSize) seeds.push("BYE");
+
+            seeds.sort(() => Math.random() - 0.5);
+
+            const rounds = [];
+            let currentPlayers = seeds;
+
+            while (currentPlayers.length > 1) {
+                const matches = [];
+                for (let i = 0; i < currentPlayers.length; i += 2) {
+                    matches.push({
+                        p1: currentPlayers[i],
+                        p2: currentPlayers[i+1],
+                        winner: (currentPlayers[i+1] === "BYE") ? currentPlayers[i] : null
+                    });
+                }
+                rounds.push(matches);
+                currentPlayers = matches.map(m => m.winner || "TBD");
+            }
+
+            tournamentData = { type: 'single', rounds };
+            renderSingleElimination();
+        }
+
+        function renderSingleElimination() {
+            const display = document.getElementById('tournament-display');
+            document.getElementById('tourney-title').innerText = "Bagan Single Elimination";
+
+            const rounds = tournamentData.rounds;
+            let html = `<div class="flex gap-6 items-center w-max min-w-full px-2 py-2">`;
+
+            rounds.forEach((roundMatches, rIdx) => {
+                const roundName = rIdx === rounds.length - 1 ? "FINALS" : (rIdx === rounds.length - 2 ? "SEMI FINALS" : `BABAK ${rIdx + 1}`);
+                html += `<div class="flex flex-col justify-around gap-4 h-full min-w-[180px] w-[200px] shrink-0">
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-lg py-1 px-2 text-center shadow-sm mb-1">
+                        <span class="text-[10px] font-black tracking-wider text-brand-400 uppercase">${roundName}</span>
+                    </div>`;
+
+                roundMatches.forEach((m, mIdx) => {
+                    const isP1Winner = m.winner === m.p1;
+                    const isP2Winner = m.winner === m.p2;
+
+                    html += `
+                        <div class="bg-slate-900 border border-slate-700/80 rounded-xl p-2 shadow-lg space-y-1.5 relative hover:border-slate-600 transition">
+                            <button onclick="advanceWinner(${rIdx}, ${mIdx}, '${m.p1}')" class="w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs font-bold ${isP1Winner ? 'bg-emerald-600 text-white border border-emerald-400 shadow-md' : 'bg-slate-800/90 text-slate-200 hover:bg-slate-700 border border-slate-700/50'} transition">
+                                <span class="truncate max-w-[120px] text-left">${m.p1 || 'TBD'}</span>
+                                ${isP1Winner ? '<i class="fa-solid fa-crown text-[11px] text-amber-300 ml-1"></i>' : ''}
+                            </button>
+                            <div class="text-[9px] text-center font-extrabold text-slate-500 tracking-wider">VS</div>
+                            <button onclick="advanceWinner(${rIdx}, ${mIdx}, '${m.p2}')" class="w-full flex justify-between items-center px-3 py-2 rounded-lg text-xs font-bold ${isP2Winner ? 'bg-emerald-600 text-white border border-emerald-400 shadow-md' : 'bg-slate-800/90 text-slate-200 hover:bg-slate-700 border border-slate-700/50'} transition">
+                                <span class="truncate max-w-[120px] text-left">${m.p2 || 'TBD'}</span>
+                                ${isP2Winner ? '<i class="fa-solid fa-crown text-[11px] text-amber-300 ml-1"></i>' : ''}
+                            </button>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+            });
+
+            const finalWinner = rounds[rounds.length - 1][0].winner;
+            html += `
+                <div class="flex flex-col items-center justify-center min-w-[150px] shrink-0 pl-4 border-l border-slate-800">
+                    <span class="text-[10px] font-black text-amber-400 uppercase mb-2 tracking-widest">JUARA</span>
+                    <div class="p-4 bg-gradient-to-tr from-amber-500/20 via-slate-900 to-yellow-500/20 border-2 border-amber-400/80 rounded-2xl text-center shadow-2xl min-w-[120px]">
+                        <i class="fa-solid fa-trophy text-3xl text-amber-400 mb-2 block animate-bounce"></i>
+                        <span class="font-extrabold text-xs text-white block truncate max-w-[110px]">${finalWinner && finalWinner !== 'TBD' ? finalWinner : '???'}</span>
+                    </div>
+                </div>
+            `;
+
+            html += `</div>`;
+            display.innerHTML = html;
+        }
+
+        function scrollBracket(amount) {
+            const wrapper = document.getElementById('tournament-scroll-wrapper');
+            if (wrapper) {
+                wrapper.scrollBy({ left: amount, behavior: 'smooth' });
+            }
+        }
+
+        function advanceWinner(rIdx, mIdx, player) {
+            if (!player || player === "BYE" || player === "TBD") return;
+            
+            tournamentData.rounds[rIdx][mIdx].winner = player;
+            playSound('beep');
+
+            if (rIdx + 1 < tournamentData.rounds.length) {
+                const nextMatchIdx = Math.floor(mIdx / 2);
+                const isP1 = mIdx % 2 === 0;
+                if (isP1) {
+                    tournamentData.rounds[rIdx + 1][nextMatchIdx].p1 = player;
+                } else {
+                    tournamentData.rounds[rIdx + 1][nextMatchIdx].p2 = player;
+                }
+            } else {
+                playSound('win');
+            }
+
+            renderSingleElimination();
+        }
+
+        function setupRoundRobin(playersList) {
+            document.getElementById('tourney-title').innerText = "Bagan Round Robin (Liga)";
+            const display = document.getElementById('tournament-display');
+
+            let matches = [];
+            for (let i = 0; i < playersList.length; i++) {
+                for (let j = i + 1; j < playersList.length; j++) {
+                    matches.push({ p1: playersList[i], p2: playersList[j] });
+                }
+            }
+
+            let html = `<div class="w-full space-y-2">`;
+            matches.forEach((m) => {
+                html += `
+                    <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-xs">
+                        <span class="font-bold text-slate-200 w-28 truncate">${m.p1}</span>
+                        <span class="text-[10px] bg-slate-800 text-brand-400 font-extrabold px-2 py-1 rounded-md">VS</span>
+                        <span class="font-bold text-slate-200 w-28 text-right truncate">${m.p2}</span>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            display.innerHTML = html;
+        }
+
+        /* ================= 🛠️ TOOLS (CUSTOM WHEEL & COIN) LOGIC ================= */
+        function switchToolSub(mode) {
+            document.getElementById('subtool-wheel-container').classList.toggle('hidden', mode !== 'wheel');
+            document.getElementById('subtool-coin-container').classList.toggle('hidden', mode !== 'coin');
+            document.getElementById('btn-tool-wheel').className = mode === 'wheel' ? 'py-2 rounded-lg bg-brand-600 text-white transition' : 'py-2 rounded-lg text-slate-400 hover:text-white transition';
+            document.getElementById('btn-tool-coin').className = mode === 'coin' ? 'py-2 rounded-lg bg-brand-600 text-white transition' : 'py-2 rounded-lg text-slate-400 hover:text-white transition';
+
+            if (mode === 'wheel') drawWheel();
+        }
+
+        function renderWheelOptionsList() {
+            const container = document.getElementById('wheel-options-list');
+            document.getElementById('wheel-items-count').innerText = `${wheelOptions.length} Item`;
+
+            container.innerHTML = wheelOptions.map((opt, idx) => `
+                <div class="flex justify-between items-center bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-xs">
+                    <span class="font-medium text-slate-200">${opt}</span>
+                    <button onclick="removeWheelOption(${idx})" class="text-slate-500 hover:text-rose-400 p-1">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addWheelOption() {
+            const input = document.getElementById('wheel-new-item-input');
+            const val = input.value.trim();
+            if (val) {
+                wheelOptions.push(val);
+                input.value = '';
+                renderWheelOptionsList();
+                drawWheel();
+            }
+        }
+
+        function removeWheelOption(idx) {
+            if (wheelOptions.length <= 2) {
+                alert("Minimal harus ada 2 opsi pada roda!");
+                return;
+            }
+            wheelOptions.splice(idx, 1);
+            renderWheelOptionsList();
+            drawWheel();
+        }
+
+        function drawWheel() {
+            const canvas = document.getElementById('wheel-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const numSegments = wheelOptions.length;
+            const angle = (2 * Math.PI) / numSegments;
+            const colors = ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#06b6d4', '#8b5cf6', '#ec4899', '#3b82f6'];
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < numSegments; i++) {
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(120, 120);
+                ctx.arc(120, 120, 120, i * angle, (i + 1) * angle);
+                ctx.fill();
+
+                ctx.save();
+                ctx.translate(120, 120);
+                ctx.rotate(i * angle + angle / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "white";
+                ctx.font = "bold 11px Plus Jakarta Sans";
+                ctx.fillText(wheelOptions[i], 102, 4);
+                ctx.restore();
+            }
+        }
+
+        function spinWheel() {
+            if (wheelOptions.length === 0) return;
+            playSound('roll');
+            const canvas = document.getElementById('wheel-canvas');
+            const randomDeg = Math.floor(1800 + Math.random() * 1800);
+            wheelRotation += randomDeg;
+            canvas.style.transform = `rotate(${wheelRotation}deg)`;
+
+            document.getElementById('wheel-winner').innerText = 'Memutar...';
+
+            setTimeout(() => {
+                const actualDeg = wheelRotation % 360;
+                const segmentAngle = 360 / wheelOptions.length;
+                const index = Math.floor((360 - (actualDeg % 360) + 270) % 360 / segmentAngle);
+                const winner = wheelOptions[index % wheelOptions.length];
+                document.getElementById('wheel-winner').innerText = `🎉 Hasil: ${winner}`;
+                playSound('win');
+            }, 4000);
+        }
+
+        function flipCoin() {
+            playSound('roll');
+            const coin = document.getElementById('coin-element');
+            const resultText = document.getElementById('coin-result');
+            const isHeads = Math.random() < 0.5;
+
+            resultText.innerText = 'Melayang...';
+            coin.style.transform = isHeads ? 'rotateY(1800deg)' : 'rotateY(1980deg)';
+
+            setTimeout(() => {
+                resultText.innerText = isHeads ? 'Hasil: GARUDA (Gambar)' : 'Hasil: ANGKA';
+                playSound('beep');
+            }, 1000);
+        }
+
+        /* Initial Setup */
+        window.onload = function() {
+            renderVisualDice();
+            generateTournament();
+        };
+    </script>
+</body>
+</html>
